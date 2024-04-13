@@ -240,16 +240,33 @@ class GlrImporter:
         mesh.polygons.foreach_set('material_index', face_materials)
 
         # Create attributes
-        mesh.vertex_colors.new(name='Shading').data.foreach_set('color', shade_colors)
-        mesh.vertex_colors.new(name='Primitive').data.foreach_set('color', prim_colors)
-        mesh.vertex_colors.new(name='Environment').data.foreach_set('color', env_colors)
-        mesh.vertex_colors.new(name='Blend').data.foreach_set('color', blend_colors)
-        mesh.vertex_colors.new(name='Fog').data.foreach_set('color', fog_colors)
+
+        mesh.vertex_colors.new(
+            name='Shade Color'
+        ).data.foreach_set('color', shade_colors)
+
+        mesh.vertex_colors.new(
+            name='Primitive Color',
+        ).data.foreach_set('color', prim_colors)
+
+        mesh.vertex_colors.new(
+            name='Env Color',
+        ).data.foreach_set('color', env_colors)
+
+        mesh.vertex_colors.new(
+            name='Blend Color',
+        ).data.foreach_set('color', blend_colors)
+
+        mesh.vertex_colors.new(
+            name='Fog Color',
+        ).data.foreach_set('color', fog_colors)
+
         mesh.uv_layers.new(name='UV0').data.foreach_set('uv', uvs0)
         mesh.uv_layers.new(name='UV1').data.foreach_set('uv', uvs1)
+
         if self.enable_fog and any(fog_levels):
             mesh.attributes.new(
-                name='FogLevel', type='FLOAT', domain='POINT',
+                name='Fog Level', type='FLOAT', domain='POINT',
             ).data.foreach_set('value', fog_levels)
 
         mesh.validate()
@@ -277,12 +294,12 @@ class GlrImporter:
         blender1, blender2 = decode_blender_mode(other_mode)
 
         # When fog is enabled, Fog Level should be used instead
-        # of the Shading Alpha
+        # of the Shade Alpha
         if geometry_mode & 0x10000:
-            combiner1 = tuple('Fog Level' if s == 'Shading Alpha' else s for s in combiner1)
-            combiner2 = tuple('Fog Level' if s == 'Shading Alpha' else s for s in combiner2)
-            blender1 = tuple('Fog Level' if s == 'Shading Alpha' else s for s in blender1)
-            blender2 = tuple('Fog Level' if s == 'Shading Alpha' else s for s in blender2)
+            combiner1 = tuple('Fog Level' if s == 'Shade Alpha' else s for s in combiner1)
+            combiner2 = tuple('Fog Level' if s == 'Shade Alpha' else s for s in combiner2)
+            blender1 = tuple('Fog Level' if s == 'Shade Alpha' else s for s in blender1)
+            blender2 = tuple('Fog Level' if s == 'Shade Alpha' else s for s in blender2)
 
         if not two_cycle_mode:
             combiner2 = blender2 = None
@@ -545,13 +562,13 @@ def make_rdp_input_nodes(mat, texture_dir, sources, tex0, tex1, location):
             input_map[f'Texel {i} Alpha'] = node.outputs['Alpha']
 
     # Vertex Color inputs
-    for vc in ['Shading', 'Primitive', 'Environment', 'Blend', 'Fog']:
+    for vc in ['Shade', 'Primitive', 'Env', 'Blend', 'Fog']:
         if f'{vc} Color' in sources or f'{vc} Alpha' in sources:
             node = nodes.new('ShaderNodeVertexColor')
             node.location = x, y
             y -= 200
-            node.layer_name = vc
-            node.name = node.label = vc
+            node.layer_name = f'{vc} Color'
+            node.name = node.label = f'{vc} Color'
             input_map[f'{vc} Color'] = node.outputs['Color']
             input_map[f'{vc} Alpha'] = node.outputs['Alpha']
 
@@ -559,8 +576,8 @@ def make_rdp_input_nodes(mat, texture_dir, sources, tex0, tex1, location):
         node = nodes.new('ShaderNodeAttribute')
         node.location = x, y
         y -= 200
-        node.attribute_name = 'FogLevel'
-        node.name = node.label = 'FogLevel'
+        node.attribute_name = 'Fog Level'
+        node.name = node.label = 'Fog Level'
         input_map['Fog Level'] = node.outputs['Fac']
 
     # Not yet implemented
