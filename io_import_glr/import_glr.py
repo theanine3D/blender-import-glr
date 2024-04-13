@@ -290,27 +290,14 @@ class GlrImporter:
         tex0['uv_map'] = 'UV0'
         tex1['uv_map'] = 'UV1'
 
-        # Determine backface culling
-        # F3D/F3DEX: 0x2000 (0010 0000 0000 0000)
-        # F3DEX2: 0x400 (0100 0000 0000)
-        # TODO: Check others, assumed under F3D/F3DEX family
-        bfc_mask = 0x2000
-        if( self.microcode == 2 or  # F3DEX2
-            self.microcode == 5 or  # L3DEX2
-            self.microcode == 7 or  # S2DEX2
-            self.microcode == 13 or # F3DEX2CBFD
-            self.microcode == 17 or # F3DZEX2OOT
-            self.microcode == 18 or # F3DZEX2MM
-            self.microcode == 21):  # F3DEX2ACCLAIM
-                bfc_mask >>= 3
-
-        cull_backface = bool(geometry_mode & bfc_mask)
+        cull_backface = get_backface_culling(geometry_mode, self.microcode)
+        cull_backface &= self.display_culling
 
         args = (
             combiner1, combiner2,
             blender1, blender2,
             tex0, tex1,
-            cull_backface & self.display_culling,
+            cull_backface,
             self.show_alpha,
         )
 
@@ -859,6 +846,26 @@ def get_texture_wrap_mode(wrap):
     if wrap == 0:   return 'Repeat'
     elif wrap == 1: return 'Mirror'
     else:           return 'Clamp'
+
+
+def get_backface_culling(geometry_mode, microcode):
+    # Determine backface culling
+    # F3D/F3DEX: 0x2000 (0010 0000 0000 0000)
+    # F3DEX2: 0x400 (0100 0000 0000)
+    # TODO: Check others, assumed under F3D/F3DEX family
+    mask = 0x2000
+    if (
+        microcode == 2 or  # F3DEX2
+        microcode == 5 or  # L3DEX2
+        microcode == 7 or  # S2DEX2
+        microcode == 13 or # F3DEX2CBFD
+        microcode == 17 or # F3DZEX2OOT
+        microcode == 18 or # F3DZEX2MM
+        microcode == 21    # F3DEX2ACCLAIM
+    ):
+        mask >>= 3
+
+    return bool(geometry_mode & mask)
 
 
 def decode_combiner_mode(mux):
