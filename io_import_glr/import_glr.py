@@ -26,8 +26,6 @@ def load(context, **keywords):
 
     filter_list = parse_filter_list(keywords['filter_list'])
     dir_name = os.path.dirname(keywords['filepath'])
-    obs = []
-
     triangle_options = {
         k: keywords[k] for k in [
             'enable_mat_transparency',
@@ -38,34 +36,41 @@ def load(context, **keywords):
     }
     triangle_options['filter_list'] = filter_list
 
+    # Deselect everything; after import, only imported objects will be
+    # selected
+    if bpy.ops.object.select_all.poll():
+        bpy.ops.object.select_all(action='DESELECT')
+
     for glr_file in files:
         filepath = os.path.join(dir_name, glr_file)
         ob = load_glr(filepath, **triangle_options)
-        obs.append(ob)
 
-    # Objects created by op are selected, active, placed at cursor, and transformed
-    if bpy.ops.object.select_all.poll():
-        bpy.ops.object.select_all(action='DESELECT')
-    for ob in obs:
+        context.scene.collection.objects.link(ob)
+
         ob.select_set(True)
-        ob.location = bpy.context.scene.cursor.location
-        ob.location = ob.location + keywords['move']
+
+        ob.location = context.scene.cursor.location
+        ob.location += keywords['move']
         ob.rotation_euler = keywords['rotation']
         ob.scale = keywords['scale']
+
         if keywords['merge_doubles']:
             ob_mesh = ob.data
             bm = bmesh.new()
             bm.from_mesh(ob_mesh)
-            merge_distance = round(keywords['merge_distance'], 6) # chopping off extra precision
+            merge_distance = round(keywords['merge_distance'], 6)  # chopping off extra precision
             bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=merge_distance)
             bm.to_mesh(ob_mesh)
-    bpy.context.view_layer.objects.active = obs[0]
+            bm.free()
+
+    # Make the last object active
+    context.view_layer.objects.active = ob
 
     # Checking and enabling Color Management options
     if keywords['enable_srgb']:
-        bpy.context.scene.display_settings.display_device = 'sRGB'
-        bpy.context.scene.view_settings.view_transform = 'Standard'
-        bpy.context.scene.sequencer_colorspace_settings.name = 'sRGB'
+        context.scene.display_settings.display_device = 'sRGB'
+        context.scene.view_settings.view_transform = 'Standard'
+        context.scene.sequencer_colorspace_settings.name = 'sRGB'
 
     return {'FINISHED'}
 
@@ -251,7 +256,6 @@ class GlrImporter:
 
         # Create object
         ob = bpy.data.objects.new(mesh.name, mesh)
-        bpy.context.scene.collection.objects.link(ob)
 
         return ob
 
