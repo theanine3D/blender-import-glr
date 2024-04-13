@@ -275,18 +275,18 @@ class GlrImporter:
         if not two_cycle_mode:
             combiner2 = blender2 = None
 
-        def make_tex_dict(crc, wrapS, wrapT):
-            tex = {}
-            tex['filepath'] = self.get_texture_path_for_crc(crc)
-            tex['filter'] = get_texture_filter(other_mode)
-            tex['wrapS'] = get_texture_wrap_mode(wrapS)
-            tex['wrapT'] = get_texture_wrap_mode(wrapT)
-            tex['wrapST'] = get_combined_texture_wrap_modes(tex['wrapS'][0], tex['wrapT'][0])
-            tex['crc'] = crc
-            return tex
-
-        tex0 = make_tex_dict(tex0_crc, tex0_wrapS, tex0_wrapT)
-        tex1 = make_tex_dict(tex1_crc, tex1_wrapS, tex1_wrapT)
+        tex0, tex1 = [
+            {
+                'crc': crc,
+                'filter': get_texture_filter(other_mode),
+                'wrapS': get_texture_wrap_mode(wrapS),
+                'wrapT': get_texture_wrap_mode(wrapT),
+            }
+            for crc, wrapS, wrapT in [
+                (tex0_crc, tex0_wrapS, tex0_wrapT),
+                (tex1_crc, tex1_wrapS, tex1_wrapT),
+            ]
+        ]
         tex0['uv_map'] = 'UV0'
         tex1['uv_map'] = 'UV1'
 
@@ -323,15 +323,9 @@ class GlrImporter:
             mat = bpy.data.materials[found_mat_index]
         else:
             mat = bpy.data.materials.new(mat_name)
-            setup_n64_material(mat, *args)
+            setup_n64_material(mat, self.texture_dir, *args)
 
         return mat
-
-    def get_texture_path_for_crc(self, crc):
-        if crc != 0:
-            return os.path.join(self.texture_dir, f'{crc:016X}.png')
-        else:
-            return ''
 
 
 # Imported materials are supposed to perform (highly simplified) high
@@ -385,6 +379,7 @@ class GlrImporter:
 
 def setup_n64_material(
     mat,
+    texture_dir,
     combiner1, combiner2,
     blender1, blender2,
     tex0, tex1,
@@ -411,7 +406,7 @@ def setup_n64_material(
     x, y = 200, 100
 
     # Create nodes for the input sources
-    input_map = make_rdp_input_nodes(mat, sources, tex0, tex1, location=(-200, 0))
+    input_map = make_rdp_input_nodes(mat, texture_dir, sources, tex0, tex1, location=(-200, 0))
 
     # 1st Color Combiner cycle
 
@@ -515,7 +510,7 @@ def connect_input(mat, input, socket):
         mat.node_tree.links.new(input, socket)
 
 
-def make_rdp_input_nodes(mat, sources, tex0, tex1, location):
+def make_rdp_input_nodes(mat, texture_dir, sources, tex0, tex1, location):
     # Given a list of input sources, creates the nodes needed to supply
     # those inputs. Returns a mapping from input source names to the
     # socket (or constant) you should use for that input.
@@ -532,9 +527,8 @@ def make_rdp_input_nodes(mat, sources, tex0, tex1, location):
     for i in range(2):
         tex = tex0 if i == 0 else tex1
         if f'Texel {i} Color' in sources or f'Texel {i} Alpha' in sources:
-            if tex['crc'] != 0:
-                node = make_texture_node(mat, tex, i, location=(x, y))
-                y -= 300
+            node = make_texture_node(mat, texture_dir, tex, i, location=(x, y))
+            y -= 300
             input_map[f'Texel {i} Color'] = node.outputs['Color']
             input_map[f'Texel {i} Alpha'] = node.outputs['Alpha']
 
@@ -580,7 +574,11 @@ def make_rdp_input_nodes(mat, sources, tex0, tex1, location):
     return input_map
 
 
-def load_image(filepath):
+def load_image(texture_dir, crc):
+    if crc == 0:
+        return None
+
+    filepath = os.path.join(texture_dir, f'{crc:016X}.png')
     try:
         image = bpy.data.images.load(filepath, check_existing=True)
     except Exception:
@@ -592,7 +590,7 @@ def load_image(filepath):
     return image
 
 
-def make_texture_node(mat, tex, tex_num, location):
+def make_texture_node(mat, texture_dir, tex, tex_num, location):
     nodes = mat.node_tree.nodes
     links = mat.node_tree.links
     x, y = location
@@ -602,8 +600,7 @@ def make_texture_node(mat, tex, tex_num, location):
     node_tex.name = node_tex.label = 'Texture 0' if tex_num == 0 else 'Texture 1'
     node_tex.width = 290
     node_tex.location = x - 150, y
-    if tex['filepath']:
-        node_tex.image = load_image(tex['filepath'])
+    node_tex.image = load_image(texture_dir, tex['crc'])
     node_tex.interpolation = tex['filter']
     uv_socket = node_tex.inputs[0]
 
@@ -862,12 +859,6 @@ def get_texture_wrap_mode(wrap):
     if wrap == 0:   return 'Repeat'
     elif wrap == 1: return 'Mirror'
     else:           return 'Clamp'
-
-
-def get_combined_texture_wrap_modes(wrapS_abbr, wrapT_abbr):
-    if wrapS_abbr == wrapT_abbr:
-        return wrapS_abbr
-    return f'{wrapS_abbr}{wrapT_abbr}'
 
 
 def decode_combiner_mode(mux):
