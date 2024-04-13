@@ -491,12 +491,25 @@ def setup_n64_material(
     links.new(input_map['Combined Color'], node_out.inputs[0])
 
     # Custom props (useful for debugging)
-    mat['n64:01 Color Combiner'] = show_combiner_formula(*combiner1[:4])
-    mat['n64:02 Alpha Combiner'] = show_combiner_formula(*combiner1[4:])
-    mat['n64:03 2nd Color Combiner'] = show_combiner_formula(*combiner2[:4]) if combiner2 else ''
-    mat['n64:04 2nd Alpha Combiner'] = show_combiner_formula(*combiner2[4:]) if combiner2 else ''
-    mat['n64:05 Blender'] = show_blender_formula(*blender1)
-    mat['n64:06 2nd Blender'] = show_blender_formula(*blender2) if blender2 else ''
+    mat['N64 Texture 0'] = show_texture_info(tex0)
+    mat['N64 Texture 1'] = show_texture_info(tex1)
+    mat['N64 Color Combiner 1'] = show_combiner_formula(*combiner1[:4])
+    mat['N64 Alpha Combiner 1'] = show_combiner_formula(*combiner1[4:])
+    mat['N64 Color Combiner 2'] = show_combiner_formula(*combiner2[:4]) if combiner2 else ''
+    mat['N64 Alpha Combiner 2'] = show_combiner_formula(*combiner2[4:]) if combiner2 else ''
+    mat['N64 Blender 1'] = show_blender_formula(*blender1)
+    mat['N64 Blender 2'] = show_blender_formula(*blender2) if blender2 else ''
+
+
+def show_texture_info(tex):
+    crc = tex['crc']
+    tfilter = tex['filter']
+    wrapS = tex['wrapS']
+    wrapT = tex['wrapT']
+
+    wrap = wrapS if wrapS == wrapT else f'{wrapS} x {wrapT}'
+
+    return f'{crc:016X}, {tfilter}, {wrap}'
 
 
 def connect_input(mat, input, socket):
