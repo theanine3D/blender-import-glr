@@ -2,7 +2,6 @@ import os
 import struct
 import bpy
 import bmesh
-import re
 import hashlib
 from .utils import (
     get_texture_filter,
@@ -25,15 +24,7 @@ def load(context, **keywords):
     if files[0] == '':
         raise RuntimeError('No .glr files have been selected for import!')
 
-    filter_list = []
-
-    if len(keywords['filter_list']) != 0:
-        raw_filter_list_str = keywords['filter_list'] + ','
-        if not re.search('^([A0-F9]{16},|NO_TEXTURE,)+$', raw_filter_list_str):
-            raise RuntimeError('Invalid filter textures list provided')
-        dup_filter_list = raw_filter_list_str[:-1].split(',')
-        filter_list = [*set(dup_filter_list)] # remove duplicates
-
+    filter_list = parse_filter_list(keywords['filter_list'])
     dir_name = os.path.dirname(keywords['filepath'])
     obs = []
 
@@ -74,6 +65,20 @@ def load(context, **keywords):
         bpy.context.scene.sequencer_colorspace_settings.name = 'sRGB'
 
     return {'FINISHED'}
+
+
+def parse_filter_list(filter_str):
+    filter_list = set()
+
+    if filter_str:
+        for x in filter_str.split(','):
+            try:
+                x = 0 if x == 'NO_TEXTURE' else int(x, 16)
+            except ValueError:
+                raise ValueError('Invalid value in filter list:', x)
+            filter_list.add(x)
+
+    return filter_list
 
 
 def load_glr(filepath, triangle_options):
@@ -163,16 +168,12 @@ class GlrImporter:
                 tex1_wrapS, tex1_wrapT,
             ) = struct.unpack('<4f4f4f4f2f2f2iQQIQ4BQ4B', fb.read(132))
 
-            tex0_crc_hex = f'{tex0_crc:016X}'
-
-            if self.filter_mode: # Blacklist mode
-                if tex0_crc_hex in self.filter_list or \
-                    (tex0_crc == 0 and 'NO_TEXTURE' in self.filter_list):
-                        continue # skip tri, go to the next one
-            else: # Whitelist mode, opposite of blacklist
-                if tex0_crc_hex not in self.filter_list or \
-                    (tex0_crc == 0 and 'NO_TEXTURE' not in self.filter_list):
-                        continue
+            # Skip tris blacklisted by their texture CRC
+            blacklisted = tex0_crc in self.filter_list
+            if not self.filter_mode:  # Whitelist mode
+                blacklisted = not blacklisted
+            if blacklisted:
+                continue
 
             # Process vertices
             for vert in tri_verts:
