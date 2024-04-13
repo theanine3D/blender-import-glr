@@ -28,16 +28,19 @@ def load(context, **keywords):
     dir_name = os.path.dirname(keywords['filepath'])
     obs = []
 
+    triangle_options = {
+        k: keywords[k] for k in [
+            'enable_mat_transparency',
+            'enable_bf_culling',
+            'enable_fog',
+            'filter_mode',
+        ]
+    }
+    triangle_options['filter_list'] = filter_list
+
     for glr_file in files:
         filepath = os.path.join(dir_name, glr_file)
-        triangle_options = (
-            keywords['enable_mat_transparency'],
-            keywords['enable_bf_culling'],
-            keywords['filter_mode'],
-            filter_list,
-            keywords['enable_fog'],
-        )
-        ob = load_glr(filepath, triangle_options)
+        ob = load_glr(filepath, **triangle_options)
         obs.append(ob)
 
     # Objects created by op are selected, active, placed at cursor, and transformed
@@ -81,21 +84,33 @@ def parse_filter_list(filter_str):
     return filter_list
 
 
-def load_glr(filepath, triangle_options):
+def load_glr(filepath, **triangle_options):
     texture_dir = os.path.abspath(os.path.dirname(filepath))
     with open(filepath, 'rb') as fb:
-        return GlrImporter(fb, texture_dir, triangle_options).load()
+        return GlrImporter(fb, texture_dir, **triangle_options).load()
 
 
 class GlrImporter:
-    def __init__(self, fb, texture_dir, triangle_options):
+    def __init__(
+        self,
+        fb,
+        texture_dir,
+        enable_mat_transparency=True,
+        enable_bf_culling=False,
+        enable_fog=True,
+        filter_mode=True,
+        filter_list='',
+    ):
+        if isinstance(filter_list, str):
+            filter_list = parse_filter_list(filter_list)
+
         self.fb = fb
         self.texture_dir = texture_dir
-        self.show_alpha = triangle_options[0]
-        self.display_culling = triangle_options[1]
-        self.filter_mode = triangle_options[2]
-        self.filter_list = triangle_options[3]
-        self.enable_fog = triangle_options[4]
+        self.show_alpha = enable_mat_transparency
+        self.display_culling = enable_bf_culling
+        self.filter_mode = filter_mode
+        self.filter_list = filter_list
+        self.enable_fog = enable_fog
         self.obj_name = None
         self.num_tris = None
         self.microcode = None
