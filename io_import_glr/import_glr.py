@@ -3,6 +3,7 @@ import struct
 import bpy
 import bmesh
 import re
+import hashlib
 
 ### Import Plugin Entry Point
 def load(context, **keywords):
@@ -305,10 +306,16 @@ class GlrImporter:
 
         cull_backface = bool(geometry_mode & bfc_mask)
 
-        mat_name = self.get_material_name_for_crcs_and_wrapmodes(
-            [tex0_crc, tex1_crc],
-            [tex0['wrapST'], tex1['wrapST']],
-            cull_backface)
+        args = (
+            combiner1, combiner2,
+            blender1, blender2,
+            tex0, tex1,
+            cull_backface & self.display_culling,
+            self.show_alpha,
+        )
+
+        mat_hash = hashlib.sha256(str(args).encode()).hexdigest()[:16]
+        mat_name = f'N64 Shader {mat_hash}'
 
         found_mat_index = bpy.data.materials.find(mat_name)
 
@@ -316,15 +323,8 @@ class GlrImporter:
             mat = bpy.data.materials[found_mat_index]
         else:
             mat = bpy.data.materials.new(mat_name)
+            setup_n64_material(mat, *args)
 
-            setup_n64_material(
-                mat,
-                combiner1, combiner2,
-                blender1, blender2,
-                tex0, tex1,
-                cull_backfacing=cull_backface & self.display_culling,
-                show_alpha=self.show_alpha,
-            )
         return mat
 
     def get_texture_path_for_crc(self, crc):
@@ -333,20 +333,6 @@ class GlrImporter:
         else:
             return ''
 
-    def get_material_name_for_crcs_and_wrapmodes(self, tex_crc, tex_wrapmodes, cull_backfaces):
-        if tex_crc[0] == 0: # Either invalid crc combo (tex0_crc == 0, tex1_crc != 0), or both crcs are null (0)
-            return 'NO_TEXTURE'
-        returning_str = ''
-        for i in range(2):
-            if tex_crc[i] != 0:
-                if i == 1:
-                    returning_str += ' : ' # using T1, add material seperator
-                returning_str += f'{tex_crc[i]:016X}'
-                if tex_wrapmodes[i] != 'R': # if both wrap S and T are Repeat, don't include wrapmode indicator
-                    returning_str += f'({tex_wrapmodes[i]})'
-        if not cull_backfaces:
-            returning_str += ' | (N)'
-        return returning_str
 
 # Imported materials are supposed to perform (highly simplified) high
 # level emulation of the N64's RDP pixel shader pipeline.
