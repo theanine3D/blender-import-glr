@@ -7,7 +7,12 @@ import hashlib
 
 ### Import Plugin Entry Point
 def load(context, **keywords):
-    if keywords['files'][0].name == '':
+    if keywords['files']:
+        files = [file.name for file in keywords['files']]
+    else:
+        files = [keywords['filepath']]
+
+    if files[0] == '':
         raise RuntimeError('No .glr files have been selected for import!')
 
     filter_list = []
@@ -22,8 +27,8 @@ def load(context, **keywords):
     dir_name = os.path.dirname(keywords['filepath'])
     obs = []
 
-    for glr_file in keywords['files']:
-        filepath = os.path.join(dir_name, glr_file.name)
+    for glr_file in files:
+        filepath = os.path.join(dir_name, glr_file)
         triangle_options = (
             keywords['enable_mat_transparency'],
             keywords['enable_bf_culling'],
