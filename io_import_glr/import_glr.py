@@ -44,8 +44,6 @@ def load(context, **keywords):
             keywords['enable_bf_culling'],
             keywords['filter_mode'],
             filter_list,
-            keywords['gen_light_color_attribute'],
-            keywords['gen_overlay_color_attribute'],
             keywords['enable_fog'],
         )
         ob = load_glr(filepath, triangle_options)
@@ -92,9 +90,7 @@ class GlrImporter:
         self.display_culling = triangle_options[1]
         self.filter_mode = triangle_options[2]
         self.filter_list = triangle_options[3]
-        self.gen_light_color_attribute = triangle_options[4]
-        self.gen_overlay_color_attribute = triangle_options[5]
-        self.enable_fog = triangle_options[6]
+        self.enable_fog = triangle_options[4]
         self.obj_name = None
         self.num_tris = None
         self.microcode = None
@@ -200,21 +196,6 @@ class GlrImporter:
 
             faces.append((len(verts) - 3, len(verts) - 2, len(verts) - 1))
 
-            # Create combination light/overlay color attributes
-            # TODO: Implement correctly based on color attributes actively used by each seperate material
-            '''
-            for _ in range(3):
-                merged_r = shade_colors[curr_vert] * prim_colors[curr_vert] * env_colors[curr_vert]
-                curr_vert += 1
-                merged_g = shade_colors[curr_vert] * prim_colors[curr_vert] * env_colors[curr_vert]
-                curr_vert += 1
-                merged_b = shade_colors[curr_vert] * prim_colors[curr_vert] * env_colors[curr_vert]
-                curr_vert += 1
-                merged_a = shade_colors[curr_vert] * prim_colors[curr_vert] * env_colors[curr_vert]
-                curr_vert += 1
-                merged_colors += [merged_r, merged_g, merged_b, merged_a]
-            '''
-
             # Gather all the info we need to make the material for this tri
             matinfo = (
                 combiner_mux,
@@ -243,10 +224,6 @@ class GlrImporter:
         mesh.vertex_colors.new(name='Environment').data.foreach_set('color', env_colors)
         mesh.vertex_colors.new(name='Blend').data.foreach_set('color', blend_colors)
         mesh.vertex_colors.new(name='Fog').data.foreach_set('color', fog_colors)
-        if self.gen_light_color_attribute:
-            mesh.vertex_colors.new(name='Light').data.foreach_set('color', light_colors)
-        if self.gen_overlay_color_attribute:
-            mesh.vertex_colors.new(name='Light').data.foreach_set('color', light_colors)
         mesh.uv_layers.new(name='UV0').data.foreach_set('uv', uvs0)
         mesh.uv_layers.new(name='UV1').data.foreach_set('uv', uvs1)
         if self.enable_fog and any(fog_levels):

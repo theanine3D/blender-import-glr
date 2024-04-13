@@ -150,18 +150,6 @@ class GLR_OT_ImportGLR(Operator, ImportHelper):
         default=True,
     )
 
-    gen_light_color_attribute: BoolProperty(
-        name='Generate \'Lighting\' Color Attribute',
-        description='Generate a color attribute which contains all combined lighting colors influencing triangles',
-        default=False
-    )
-
-    gen_overlay_color_attribute: BoolProperty(
-        name='Generate \'Overlay\' Color Attribute',
-        description='Generate a color attribute which contains all combined overlay colors influencing triangles',
-        default=False
-    )
-
     filter_mode: BoolProperty(
         name='Blacklist',
         description='Blacklist or whitelist mode for chosen filtered textures',
@@ -231,25 +219,6 @@ class GLR_PT_scene(Panel):
         layout.prop(operator, 'enable_bf_culling')
         layout.prop(operator, 'enable_fog')
 
-class GLR_PT_colors(Panel):
-    bl_space_type = 'FILE_BROWSER'
-    bl_region_type = 'TOOL_PROPS'
-    bl_label = 'Colors'
-    bl_parent_id = 'FILE_PT_operator'
-
-    @classmethod
-    def poll(cls, context):
-        sfile = context.space_data
-        operator = sfile.active_operator
-        return operator.bl_idname == 'IMPORT_SCENE_OT_glr'
-
-    def draw(self, context):
-        layout = self.layout
-        sfile = context.space_data
-        operator = sfile.active_operator
-        layout.prop(operator, 'gen_light_color_attribute')
-        layout.prop(operator, 'gen_overlay_color_attribute')
-
 class GLR_PT_filter(Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
@@ -278,8 +247,7 @@ CLASSES = (
     GLR_OT_ImportGLR,
     GLR_PT_transform,
     GLR_PT_scene,
-   #GLR_PT_colors, #TODO: Implement correctly
-    GLR_PT_filter
+    GLR_PT_filter,
 )
 
 def register():
