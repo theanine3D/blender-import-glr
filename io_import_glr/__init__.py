@@ -163,8 +163,16 @@ class GLR_OT_ImportGLR(Operator, ImportHelper):
 
     def execute(self, context):
         from . import import_glr
+        import time
+
         keywords = self.as_keywords(ignore=('filter_glob',))
-        return import_glr.load(context, **keywords)
+
+        start_t = time.time()
+        result = import_glr.load(context, **keywords)
+        elapsed_t = time.time() - start_t
+        print(f'GLR import finished in {elapsed_t:.2f} s')
+
+        return result
 
     def draw(self, context):
         pass
