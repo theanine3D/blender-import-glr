@@ -1,0 +1,30 @@
+name: ZIP Addon
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  rolling-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Zip
+      run: |
+        7z a io_import_glr-latest.zip io_import_glr
+
+    - name: Tag
+      run: |
+        git tag --force latest ${{ github.sha }}
+        git push --force origin latest
+
+    - name: Release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: latest
+        artifacts: io_import_glr-latest.zip
+        allowUpdates: true
+        omitBodyDuringUpdate: true
+        omitNameDuringUpdate: true
