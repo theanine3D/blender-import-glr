@@ -104,8 +104,8 @@ class N64Shader:
             mat.blend_method = 'OPAQUE'
 
         # Custom props (useful for debugging)
-        mat['N64 Texture 0'] = show_texture_info(tex0)
-        mat['N64 Texture 1'] = show_texture_info(tex1)
+        mat['N64 Texture 0'] = show_texture_info(tex0) if tex0['crc'] else ''
+        mat['N64 Texture 1'] = show_texture_info(tex1) if tex1['crc'] else ''
         mat['N64 Color Combiner 1'] = show_combiner_formula(*combiner1[:4])
         mat['N64 Alpha Combiner 1'] = show_combiner_formula(*combiner1[4:])
         mat['N64 Color Combiner 2'] = show_combiner_formula(*combiner2[:4]) if combiner2 else ''
@@ -450,4 +450,4 @@ def show_texture_info(tex):
 
     wrap = wrapS if wrapS == wrapT else f'{wrapS} x {wrapT}'
 
-    return f'{crc:016X}, {tfilter}, {wrap}'
+    return f'{crc:016X},{tfilter},{wrap}'
