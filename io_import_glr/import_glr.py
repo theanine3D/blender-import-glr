@@ -332,10 +332,8 @@ class GlrImporter:
         mat_hash = hashlib.sha256(str(args).encode()).hexdigest()[:16]
         mat_name = f'N64 Shader {mat_hash}'
 
-        found_mat_index = bpy.data.materials.find(mat_name)
-
-        if found_mat_index != -1:
-            mat = bpy.data.materials[found_mat_index]
+        if mat_name in bpy.data.materials:
+            mat = bpy.data.materials[mat_name]
         else:
             mat = bpy.data.materials.new(mat_name)
             setup_n64_material(mat, self.texture_dir, *args)
