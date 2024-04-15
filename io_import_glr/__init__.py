@@ -2,7 +2,7 @@ bl_info = {
     'name': 'GLideN64 Rip (GLR) Importer',
     'author': 'Luctaris, scurest',
     'version': (1, 0, 1),
-    'blender': (2, 80, 0),
+    'blender': (3, 5, 0),
     'location': 'File > Import',
     'description': 'Import GLR',
     'warning': '',
