@@ -131,10 +131,19 @@ class GlrImporter:
 
         # Check version
         version = struct.unpack('<H', fb.read(2))[0]
-        if version > 0 and version < 4:
-            raise RuntimeError(f'Outdated glr file format detected ({version}), please update the glr import addon')
-        elif version != 4:
-            raise RuntimeError(f'Unknown N64 Ripper version ({version}) encountered')
+        expected_version = 4
+        if version < expected_version:
+            raise RuntimeError(
+                f'Outdated GLR version detected ({version}). '
+                f'This addon expects {expected_version}. '
+                'You should update your GLR ripping plugin.'
+            )
+        elif version > expected_version:
+            raise RuntimeError(
+                f'Incompatible GLR version detected ({version}). '
+                f'This addon expects {expected_version}. '
+                'You should update this addon.'
+            )
 
         romname = fb.read(20)
         romname = romname.decode(errors='replace')
