@@ -48,9 +48,7 @@ def load(context, **keywords):
         ob.select_set(True)
 
         ob.location = context.scene.cursor.location
-        ob.location += keywords['move']
-        ob.rotation_euler = keywords['rotation']
-        ob.scale = keywords['scale']
+        ob.scale = (keywords['scale'],) * 3
 
         if keywords['merge_doubles']:
             ob_mesh = ob.data

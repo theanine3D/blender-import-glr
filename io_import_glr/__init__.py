@@ -89,22 +89,10 @@ class GLR_OT_ImportGLR(Operator, ImportHelper):
         options={'HIDDEN', 'SKIP_SAVE'}
     )
 
-    move: FloatVectorProperty(
-        name='Move',
-        subtype='TRANSLATION',
-        default=(0.0, 0.0, 0.0)
-    )
-
-    rotation: FloatVectorProperty(
-        name='Rotation',
-        subtype='EULER',
-        default=(radians(0.0), 0.0, 0.0)
-    )
-
-    scale: FloatVectorProperty(
+    scale: FloatProperty(
         name='Scale',
-        subtype='XYZ',
-        default=(1.0, 1.0, 1.0)
+        default=1.0,
+        min=0.0,
     )
 
     merge_doubles: BoolProperty(
@@ -199,8 +187,6 @@ class GLR_PT_transform(Panel):
         layout.use_property_split = True
         sfile = context.space_data
         operator = sfile.active_operator
-        layout.prop(operator, 'move')
-        layout.prop(operator, 'rotation')
         layout.prop(operator, 'scale')
 
 class GLR_PT_scene(Panel):
