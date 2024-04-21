@@ -6,7 +6,6 @@ import hashlib
 from .shader import setup_n64_material
 from .utils import (
     get_texture_filter,
-    get_texture_wrap_mode,
     get_backface_culling,
     decode_combiner_mode,
     decode_blender_mode,
@@ -132,9 +131,9 @@ class GlrImporter:
 
         # Check version
         version = struct.unpack('<H', fb.read(2))[0]
-        if version > 0 and version < 3:
+        if version > 0 and version < 4:
             raise RuntimeError(f'Outdated glr file format detected ({version}), please update the glr import addon')
-        elif version != 3:
+        elif version != 4:
             raise RuntimeError(f'Unknown N64 Ripper version ({version}) encountered')
 
         romname = fb.read(20)
@@ -180,12 +179,14 @@ class GlrImporter:
                 other_mode,
                 geometry_mode,
                 tex0_crc,
-                tex0_maskS, tex0_maskT,
+                tex0_clampS, tex0_clampT,
                 tex0_wrapS, tex0_wrapT,
+                tex0_mirrorS, tex0_mirrorT,
                 tex1_crc,
-                tex1_maskS, tex1_maskT,
+                tex1_clampS, tex1_clampT,
                 tex1_wrapS, tex1_wrapT,
-            ) = struct.unpack('<4f4f4f4f2f2f2iQQIQ4BQ4B', fb.read(132))
+                tex1_mirrorS, tex1_mirrorT,
+            ) = struct.unpack('<4f4f4f4f2f2f2iQQIQ2f2f2BxxQ2f2f2Bxx', fb.read(164))
 
             # Skip tris blacklisted by their texture CRC
             blacklisted = tex0_crc in self.filter_list
@@ -201,8 +202,8 @@ class GlrImporter:
                 ) = struct.unpack('<11f', vert)
 
                 shade_colors += [r, g, b, a]
-                uvs0 += [s0, t0]
-                uvs1 += [s1, t1]
+                uvs0 += [s0, 1 - t0]      # Flip UV
+                uvs1 += [s1, 1 - t1]      # Flip UV
                 verts.append((x, -z, y))  # Yup2Zup
 
                 # When fog enabled, alpha is the fog level
@@ -222,9 +223,13 @@ class GlrImporter:
                 other_mode,
                 geometry_mode,
                 tex0_crc,
+                tex0_clampS, tex0_clampT,
                 tex0_wrapS, tex0_wrapT,
+                tex0_mirrorS, tex0_mirrorT,
                 tex1_crc,
+                tex1_clampS, tex1_clampT,
                 tex1_wrapS, tex1_wrapT,
+                tex1_mirrorS, tex1_mirrorT,
             )
             material_index = matinfo_cache.setdefault(matinfo, len(matinfo_cache))
             face_materials.append(material_index)
@@ -281,9 +286,13 @@ class GlrImporter:
             other_mode,
             geometry_mode,
             tex0_crc,
+            tex0_clampS, tex0_clampT,
             tex0_wrapS, tex0_wrapT,
+            tex0_mirrorS, tex0_mirrorT,
             tex1_crc,
+            tex1_clampS, tex1_clampT,
             tex1_wrapS, tex1_wrapT,
+            tex1_mirrorS, tex1_mirrorT,
         ) = matinfo
 
         cycle_type = (other_mode >> 52) & 0x3
@@ -307,12 +316,16 @@ class GlrImporter:
             {
                 'crc': crc,
                 'filter': get_texture_filter(other_mode),
-                'wrapS': get_texture_wrap_mode(wrapS),
-                'wrapT': get_texture_wrap_mode(wrapT),
+                'clampS': clampS,
+                'clampT': clampT,
+                'wrapS': wrapS,
+                'wrapT': wrapT,
+                'mirrorS': mirrorS,
+                'mirrorT': mirrorT,
             }
-            for crc, wrapS, wrapT in [
-                (tex0_crc, tex0_wrapS, tex0_wrapT),
-                (tex1_crc, tex1_wrapS, tex1_wrapT),
+            for crc, clampS, clampT, wrapS, wrapT, mirrorS, mirrorT in [
+                (tex0_crc, tex0_clampS, tex0_clampT, tex0_wrapS, tex0_wrapT, tex0_mirrorS, tex0_mirrorT),
+                (tex1_crc, tex1_clampS, tex1_clampT, tex1_wrapS, tex1_wrapT, tex1_mirrorS, tex1_mirrorT),
             ]
         ]
         tex0['uv_map'] = 'UV0'

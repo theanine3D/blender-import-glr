@@ -11,14 +11,6 @@ def get_texture_filter(other_mode):
     return 'Closest' if filter == 0 else 'Linear'
 
 
-def get_texture_wrap_mode(wrap):
-    # bit 0 = MIRROR
-    # bit 1 = CLAMP
-    if wrap == 0:   return 'Repeat'
-    elif wrap == 1: return 'Mirror'
-    else:           return 'Clamp'
-
-
 def get_backface_culling(geometry_mode, microcode):
     # Determine backface culling
     # F3D/F3DEX: 0x2000 (0010 0000 0000 0000)

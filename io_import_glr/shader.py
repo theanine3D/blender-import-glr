@@ -47,7 +47,24 @@ from .utils import (
 # Unlike the combiner, it can use the current pixel in the framebuffer
 # as input. It, too, can run in two-cycle mode.
 #
+# TEXTURE WRAPPING
+#
+# Texture wrapping on the N64 is more complicated than the normal
+# "repeat", "clamp", "mirror" modes. Clamping and wrapping can occur
+# at configurable edges, NOT just at the boundary of the texture. The
+# allows eg. a texture to repeat only a fixed number of times.
+#
+# The manual gives this example, which first clamps, then wraps with
+# mirroring.
+#
+#  0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,...    Input Coordinate
+#  0,1,2,3,3,2,1,0,0,1, 2, 3, 3, 3, 3, 3,...    Wrapped Coordinates
+#         ▲                 ▲
+#         │                 └── clamp edge
+#         └──────────────────── wrap edge
+#
 # REFERENCES
+#
 # http://n64devkit.square7.ch/tutorial/graphics/
 # http://n64devkit.square7.ch/pro-man/pro12/index.htm
 # https://hack64.net/wiki/doku.php?id=rcpstructs
@@ -362,92 +379,156 @@ class N64Shader:
         x -= 370
 
         # Wrapping
-        wrapS, wrapT = tex['wrapS'], tex['wrapT']
-        if wrapS == wrapT == 'Repeat':
-            node_tex.extension = 'REPEAT'
-        elif wrapS == wrapT == 'Clamp':
-            node_tex.extension = 'EXTEND'
-        else:
-            # Use math nodes to emulate other wrap modes
-
-            node_tex.extension = 'EXTEND'
-
-            frame = nodes.new('NodeFrame')
-            frame.label = f'{wrapS} ({wrapS[0]}) x {wrapT} ({wrapT[0]})'
-
-            # Combine XYZ
-            node_com = nodes.new('ShaderNodeCombineXYZ')
-            node_com.parent = frame
-            node_com.location = x - 80, y - 110
-            links.new(uv_socket, node_com.outputs[0])
-            u_socket = node_com.inputs[0]
-            v_socket = node_com.inputs[1]
-
-            x -= 120
-
-            for i in [0, 1]:
-                wrap = wrapS if i == 0 else wrapT
-                socket = node_com.inputs[i]
-
-                if wrap == 'Repeat':
-                    node_math = nodes.new('ShaderNodeMath')
-                    node_math.parent = frame
-                    node_math.location = x - 140, y + 30 - i*200
-                    node_math.operation = 'WRAP'
-                    node_math.inputs[1].default_value = 0
-                    node_math.inputs[2].default_value = 1
-                    links.new(socket, node_math.outputs[0])
-                    socket = node_math.inputs[0]
-
-                elif wrap == 'Mirror':
-                    node_math = nodes.new('ShaderNodeMath')
-                    node_math.parent = frame
-                    node_math.location = x - 140, y + 30 - i*200
-                    node_math.operation = 'PINGPONG'
-                    node_math.inputs[1].default_value = 1
-                    links.new(socket, node_math.outputs[0])
-                    socket = node_math.inputs[0]
-
-                else:
-                    # Clamp doesn't require a node since the default on the
-                    # Texture node is EXTEND.
-                    # Adjust node location for aesthetics though.
-                    if i == 0:
-                        node_com.location[1] += 90
-
-                if i == 0:
-                    u_socket = socket
-                else:
-                    v_socket = socket
-
-            x -= 180
-
-            # Separate XYZ
-            node_sep = nodes.new('ShaderNodeSeparateXYZ')
-            node_sep.parent = frame
-            node_sep.location = x - 140, y - 100
-            links.new(u_socket, node_sep.outputs[0])
-            links.new(v_socket, node_sep.outputs[1])
-            uv_socket = node_sep.inputs[0]
-
-            x -= 180
+        uv_socket = self.make_texcoord_wrapper(tex, node_tex, location=(x, y))
+        x, y = uv_socket.node.location
+        x -= 220
 
         # UVMap node
         node_uv = nodes.new('ShaderNodeUVMap')
         node_uv.name = node_uv.label = f'UV Map Texture {tex_num}'
-        node_uv.location = x - 160, y - 70
+        node_uv.location = x - 160, y
         node_uv.uv_map = tex['uv_map']
-        links.new(uv_socket, node_uv.outputs[0])
+        links.new(node_uv.outputs[0], uv_socket)
 
         return node_tex
+
+    def make_texcoord_wrapper(self, tex, node_tex, location):
+        # NOTE: Kirby 64's title screen is a good test for texture
+        # wrapping.
+
+        # First we check if the clamp/wrap boundaries line up with the
+        # edge of the texture. If they do they can be done with a
+        # classic GL_REPEAT-type texture mode. If both directions are
+        # the same, we can do the whole wrapping calculation with the
+        # Image Texture node's extension property.
+
+        extensions = [None, None]
+        for i in [0, 1]:
+            clamp = tex['clampS'] if i == 0 else tex['clampT']
+            wrap = tex['wrapS'] if i == 0 else tex['wrapT']
+            mirror = tex['mirrorS'] if i == 0 else tex['mirrorT']
+
+            # Clamps at image edge, no wrap
+            if clamp == 1 and (wrap == 0 or wrap >= 1):
+                extensions[i] = 'EXTEND'
+            # No clamp, wraps at texture edge
+            elif clamp == 0 and wrap == 1:
+                extensions[i] = 'MIRROR' if mirror else 'REPEAT'
+            # No clamp, no wrap (TODO: confirm this)
+            elif clamp == 0 and wrap == 0:
+                extensions[i] = 'EXTEND'
+
+        if extensions[0] == extensions[1] and extensions[0] != None:
+            node_tex.extension = extensions[i]
+            return node_tex.inputs[0]
+
+        # Otherwise, separate the U and V and do clamp-wrap-mirror
+        # using math nodes.
+
+        nodes = self.nodes
+        links = self.links
+
+        node_tex.extension = 'EXTEND'
+
+        frame = nodes.new('NodeFrame')
+        frame.label = 'Clamp Wrap Mirror Texcoord'
+
+        x, y = location
+
+        # Combine XYZ
+        node_com = nodes.new('ShaderNodeCombineXYZ')
+        node_com.parent = frame
+        node_com.location = x - 80, y - 110
+        links.new(node_com.outputs[0], node_tex.inputs[0])
+
+        # Separate XYZ
+        node_sep = nodes.new('ShaderNodeSeparateXYZ')
+        node_sep.parent = frame
+        node_sep.location = x - 80, y - 110
+
+        for i in [0, 1]:
+            clamp = tex['clampS'] if i == 0 else tex['clampT']
+            wrap = tex['wrapS'] if i == 0 else tex['wrapT']
+            mirror = tex['mirrorS'] if i == 0 else tex['mirrorT']
+
+            socket = node_com.inputs[i]
+
+            x, y = location
+            x -= 120
+            y -= 200 * i
+
+            # The clamp/wrap edges are given for a V >= 0 space. But
+            # we do (u,1-v) when importing UVs (because textures are
+            # upside down?), which turns it into a V <= 1 space.
+            #
+            # Converting the Ping Pong node for this space seems
+            # annoying, so instead, for the V direction only, we
+            # convert back to V >= 0 space with a 1-x Math node, do
+            # the wrapping as normal, then convert back again.
+            #
+            # This is rather ugly :/
+            if i == 1:
+                node = nodes.new('ShaderNodeMath')
+                node.parent = frame
+                node.location = x - 140, y
+                node.operation = 'SUBTRACT'
+                links.new(node.outputs[0], socket)
+                node.inputs[0].default_value = 1
+                socket = node.inputs[1]
+                x -= 200
+
+            if wrap > 0:
+                if mirror:
+                    # Mirror with a Math/Ping Pong node
+                    node = nodes.new('ShaderNodeMath')
+                    node.parent = frame
+                    node.location = x - 140, y
+                    node.operation = 'PINGPONG'
+                    links.new(node.outputs[0], socket)
+                    socket = node.inputs[0]
+                    node.inputs[1].default_value = wrap  # scale
+                else:
+                    # Wrap with a Math/Wrap node
+                    node = nodes.new('ShaderNodeMath')
+                    node.parent = frame
+                    node.location = x - 140, y
+                    node.operation = 'WRAP'
+                    links.new(node.outputs[0], socket)
+                    socket = node.inputs[0]
+                    node.inputs[1].default_value = 0     # min
+                    node.inputs[2].default_value = wrap  # max
+                x -= 200
+
+            if clamp > 0:
+                # Clamp
+                node = nodes.new('ShaderNodeClamp')
+                node.parent = frame
+                node.location = x - 140, y
+                links.new(node.outputs[0], socket)
+                socket = node.inputs[0]
+                node.inputs[1].default_value = 0      # min
+                node.inputs[2].default_value = clamp  # max
+                x -= 200
+
+            # 1 - V converts V back into original UV space
+            if i == 1:
+                node = nodes.new('ShaderNodeMath')
+                node.parent = frame
+                node.location = x - 140, y
+                node.operation = 'SUBTRACT'
+                links.new(node.outputs[0], socket)
+                node.inputs[0].default_value = 1
+                socket = node.inputs[1]
+                x -= 200
+
+            links.new(node_sep.outputs[i], socket)
+
+            node_sep.location[0] = min(node_sep.location[0], x - 200)
+
+        return node_sep.inputs[0]
 
 
 def show_texture_info(tex):
     crc = tex['crc']
     tfilter = tex['filter']
-    wrapS = tex['wrapS']
-    wrapT = tex['wrapT']
-
-    wrap = wrapS if wrapS == wrapT else f'{wrapS} x {wrapT}'
-
-    return f'{crc:016X},{tfilter},{wrap}'
+    return f'{crc:016X},{tfilter}'
