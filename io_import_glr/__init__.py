@@ -16,12 +16,10 @@ if 'bpy' in locals():
     if 'import_glr' in locals():
         importlib.reload(import_glr)
 
-import os
-from math import radians
 import bpy
 import bmesh
 from bpy_extras.io_utils import ImportHelper
-from bpy.props import StringProperty, BoolProperty, EnumProperty, FloatProperty, BoolVectorProperty, FloatVectorProperty, CollectionProperty
+from bpy.props import StringProperty, BoolProperty, FloatProperty, CollectionProperty
 from bpy.types import Panel, Operator, OperatorFileListElement
 
 
