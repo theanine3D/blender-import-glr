@@ -162,16 +162,43 @@ class N64Shader:
         node.inputs[0].default_value = 1  # Fac
         return node, node.inputs[6], node.inputs[7], node.outputs[2]
 
-    def make_combiners(self, combiner1, combiner2):
-        self.make_color_combiner(combiner1[:4], location=(-630, 500))
-        self.make_alpha_combiner(combiner1[4:], location=(-630, 0))
+    def get_next_x_position(self):
+        """
+        Get the X position to put the next block of nodes at.
 
-        if combiner2:
-            self.make_color_combiner(combiner2[:4], location=(250, 500))
-            self.make_alpha_combiner(combiner2[4:], location=(250, 0))
+        Blocks are created from left to right following the path of
+        the "Combined Color" and "Combined Alpha" variables. Gets a
+        point to the right of those sockets.
+        """
+        # Start position
+        locs = [-630]
+
+        for arg in ['Combined Color', 'Combined Alpha']:
+            if arg not in self.vars:
+                continue
+            if not isinstance(self.vars[arg], bpy.types.NodeSocket):
+                continue
+            x = self.vars[arg].node.location[0]
+            x += 300  # move node width + gutter
+            locs.append(x)
+
+        return max(locs)
+
+    def make_combiners(self, combiner1, combiner2):
+        x = self.get_next_x_position()
+        self.make_color_combiner(combiner1[:4], location=(x, 500))
+        self.make_alpha_combiner(combiner1[4:], location=(x, 0))
+
+        if not combiner2:
+            return
+
+        x = self.get_next_x_position()
+        self.make_color_combiner(combiner2[:4], location=(x, 500))
+        self.make_alpha_combiner(combiner2[4:], location=(x, 0))
 
     def make_blenders(self, blender1, blender2):
-        x, y = 1220, 220
+        x = self.get_next_x_position()
+        y = 220
 
         for blender in [blender1, blender2]:
             if not blender:
@@ -187,21 +214,24 @@ class N64Shader:
                 break
 
     def make_output(self):
+        x = self.get_next_x_position()
+
         # If the shader needs alpha blending, combine the color and
         # alpha with a Transparent BSDF + Mix Shader.
         if self.use_alpha:
             node_mix = self.nodes.new('ShaderNodeMixShader')
             node_trans = self.nodes.new('ShaderNodeBsdfTransparent')
 
-            node_mix.location = 1950, 200
-            node_trans.location = 1680, 400
+            node_mix.location = x + 200, 300
+            node_trans.location = x, 400
+            x += 500
 
             self.connect('Combined Alpha', node_mix.inputs[0])
             self.connect(node_trans.outputs[0], node_mix.inputs[1])
             self.connect('Combined Color', node_mix.inputs[2])
 
         node_out = self.nodes.new('ShaderNodeOutputMaterial')
-        node_out.location = 2250, 160
+        node_out.location = x, 160
         if self.use_alpha:
             self.connect(node_mix.outputs[0], node_out.inputs[0])
         else:
