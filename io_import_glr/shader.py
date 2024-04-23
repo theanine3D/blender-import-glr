@@ -241,21 +241,27 @@ class N64Shader:
         a, b, c, d = combiner
         x, y = location
 
+        frame = self.new_node('NodeFrame')
+        frame.label = show_combiner_formula(a, b, c, d)
+
         # A - B
         node, in1, in2, out1 = self.new_color_math_node('SUBTRACT')
         node.location = x, y
+        node.parent = frame
         self.connect(a, in1)
         self.connect(b, in2)
 
         # * C
         node, in1, in2, out2 = self.new_color_math_node('MULTIPLY')
         node.location = x + 230, y - 120
+        node.parent = frame
         self.connect(out1, in1)
         self.connect(c, in2)
 
         # + D
         node, in1, in2, out3 = self.new_color_math_node('ADD')
         node.location = x + 460, y - 240
+        node.parent = frame
         self.connect(out2, in1)
         self.connect(d, in2)
 
@@ -265,10 +271,14 @@ class N64Shader:
         a, b, c, d = combiner
         x, y = location
 
+        frame = self.new_node('NodeFrame')
+        frame.label = show_combiner_formula(a, b, c, d)
+
         # A - B
         node1 = self.new_node('ShaderNodeMath')
         node1.operation = 'SUBTRACT'
         node1.location = x + 90, y - 130
+        node1.parent = frame
         self.connect(a, node1.inputs[0])
         self.connect(b, node1.inputs[1])
 
@@ -276,6 +286,7 @@ class N64Shader:
         node2 = self.new_node('ShaderNodeMath')
         node2.operation = 'MULTIPLY_ADD'
         node2.location = x + 370, y - 150
+        node2.parent = frame
         self.connect(node1.outputs[0], node2.inputs[0])
         self.connect(c, node2.inputs[1])
         self.connect(d, node2.inputs[2])
