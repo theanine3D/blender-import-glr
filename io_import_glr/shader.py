@@ -209,9 +209,15 @@ class N64Shader:
                 node.location = x, y
                 x += 320
 
+            # The only blend mode we can do in Blender is alpha
+            # blending, so if the blender reads from the framebuffer
+            # *at all*, we crudely assume it is doing alpha blending.
             if 'Framebuffer Color' in blender:
                 if self.vars['Combined Alpha'] != 1:
                     self.use_alpha = True
+
+                # Since alpha blending occurs after the shader, we
+                # can't do anything else, so stop here.
                 break
 
     def make_output(self):
@@ -305,10 +311,15 @@ class N64Shader:
         self.vars['Combined Alpha'] = node2.outputs[0]
 
     def make_simple_blender_mix_node(self, blender):
-        # Creates a node for the blender in the simple case when it can be
-        # implemented by a MixRGB (lerp) node. Returns the node if created,
-        # or None if the blender wasn't simple enough.
+        """
+        Creates a mix node when the blender does simple mixing.
 
+        In this case the blender basically functions as another color
+        combiner. Fogging is an important special case.
+
+        Returns the node if created, or None if the blender wasn't
+        simple enough.
+        """
         p, a, m, b = blender
 
         # It's simple if...
