@@ -96,13 +96,13 @@ class GLR_OT_ImportGLR(Operator, ImportHelper):
     )
 
     merge_doubles: BoolProperty(
-        name='Merge Triangles',
-        description='Remove vertice doubles after import',
+        name='Merge Doubles',
+        description='Merge vertex doubles after import',
         default=True
     )
 
     merge_distance: FloatProperty(
-        name='dist',
+        name='Merge Distance',
         description='Distance to merge doubles by',
         min=0.0,
         soft_min=0.0,
@@ -207,7 +207,7 @@ class GLR_PT_scene(Panel):
         operator = sfile.active_operator
         row = layout.row()
         row.prop(operator, 'merge_doubles')
-        row.prop(operator, 'merge_distance')
+        row.prop(operator, 'merge_distance', text='Dist')
         layout.prop(operator, 'enable_srgb')
         layout.prop(operator, 'enable_mat_transparency')
         layout.prop(operator, 'enable_bf_culling')
