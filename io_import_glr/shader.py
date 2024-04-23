@@ -147,16 +147,13 @@ class N64Shader:
                 v = (v, v, v, 1.0)
             socket.default_value = v
 
-    def new_node(self, node_type):
-        return self.material.node_tree.nodes.new(node_type)
-
     def new_color_math_node(self, blend_type):
         """
         Creates a node for color math.
 
         Returns the node, the two input sockets, and the output socket.
         """
-        node = self.new_node('ShaderNodeMix')
+        node = self.nodes.new('ShaderNodeMix')
         node.data_type = 'RGBA'
         node.blend_type = blend_type
         node.inputs[0].default_value = 1  # Fac
@@ -253,7 +250,7 @@ class N64Shader:
             self.vars['Combined Color'] = self.vars[d]
             return
 
-        frame = self.new_node('NodeFrame')
+        frame = self.nodes.new('NodeFrame')
         frame.label = show_combiner_formula(a, b, c, d)
 
         # A - B
@@ -288,11 +285,11 @@ class N64Shader:
             self.vars['Combined Alpha'] = self.vars[d]
             return
 
-        frame = self.new_node('NodeFrame')
+        frame = self.nodes.new('NodeFrame')
         frame.label = show_combiner_formula(a, b, c, d)
 
         # A - B
-        node1 = self.new_node('ShaderNodeMath')
+        node1 = self.nodes.new('ShaderNodeMath')
         node1.operation = 'SUBTRACT'
         node1.location = x + 90, y - 130
         node1.parent = frame
@@ -300,7 +297,7 @@ class N64Shader:
         self.connect(b, node1.inputs[1])
 
         # * C + D
-        node2 = self.new_node('ShaderNodeMath')
+        node2 = self.nodes.new('ShaderNodeMath')
         node2.operation = 'MULTIPLY_ADD'
         node2.location = x + 370, y - 150
         node2.parent = frame
@@ -362,7 +359,7 @@ class N64Shader:
             # Vertex Color inputs
             for vc in ['Shade', 'Primitive', 'Env', 'Blend', 'Fog']:
                 if var in [f'{vc} Color', f'{vc} Alpha']:
-                    node = self.new_node('ShaderNodeVertexColor')
+                    node = self.nodes.new('ShaderNodeVertexColor')
                     node.location = x, y
                     y -= 200
                     node.layer_name = f'{vc} Color'
@@ -372,7 +369,7 @@ class N64Shader:
 
             # Fog Level
             if var == 'Fog Level':
-                node = self.new_node('ShaderNodeAttribute')
+                node = self.nodes.new('ShaderNodeAttribute')
                 node.location = x, y
                 y -= 290
                 node.attribute_name = 'Fog Level'
@@ -384,7 +381,7 @@ class N64Shader:
             # level. But certain effects (like Peach's portrait
             # morphing into Bowser's in SM64) won't work.
             if var in ['LOD Fraction', 'Primitive LOD Fraction']:
-                node = self.new_node('ShaderNodeValue')
+                node = self.nodes.new('ShaderNodeValue')
                 node.location = x, y
                 y -= 200
                 node.outputs[0].default_value = 0.0
@@ -402,7 +399,7 @@ class N64Shader:
             for un_var in unimplemented:
                 if var == un_var:
                     print('GLR Import: unimplemented color combiner input:', un_var)
-                    node = self.new_node('ShaderNodeRGB')
+                    node = self.nodes.new('ShaderNodeRGB')
                     node.location = x, y
                     y -= 300
                     node.outputs[0].default_value = (0.0, 1.0, 1.0, 1.0)
@@ -426,12 +423,10 @@ class N64Shader:
         return image
 
     def make_texture_unit(self, tex, tex_num, location):
-        nodes = self.nodes
-        links = self.links
         x, y = location
 
         # Image Texture node
-        node_tex = nodes.new('ShaderNodeTexImage')
+        node_tex = self.nodes.new('ShaderNodeTexImage')
         node_tex.name = node_tex.label = f'Texture {tex_num}'
         node_tex.width = 290
         node_tex.location = x - 150, y
@@ -444,14 +439,15 @@ class N64Shader:
         # Wrapping
         uv_socket = self.make_texcoord_wrapper(tex, node_tex, location=(x, y))
         x, y = uv_socket.node.location
+
         x -= 220
 
         # UVMap node
-        node_uv = nodes.new('ShaderNodeUVMap')
+        node_uv = self.nodes.new('ShaderNodeUVMap')
         node_uv.name = node_uv.label = f'UV Map Texture {tex_num}'
         node_uv.location = x - 160, y
         node_uv.uv_map = tex['uv_map']
-        links.new(node_uv.outputs[0], uv_socket)
+        self.connect(node_uv.outputs[0], uv_socket)
 
         return node_tex
 
@@ -488,24 +484,21 @@ class N64Shader:
         # Otherwise, separate the U and V and do clamp-wrap-mirror
         # using math nodes.
 
-        nodes = self.nodes
-        links = self.links
-
         node_tex.extension = 'EXTEND'
 
-        frame = nodes.new('NodeFrame')
+        frame = self.nodes.new('NodeFrame')
         frame.label = 'Clamp Wrap Mirror Texcoord'
 
         x, y = location
 
         # Combine XYZ
-        node_com = nodes.new('ShaderNodeCombineXYZ')
+        node_com = self.nodes.new('ShaderNodeCombineXYZ')
         node_com.parent = frame
         node_com.location = x - 80, y - 110
-        links.new(node_com.outputs[0], node_tex.inputs[0])
+        self.connect(node_com.outputs[0], node_tex.inputs[0])
 
         # Separate XYZ
-        node_sep = nodes.new('ShaderNodeSeparateXYZ')
+        node_sep = self.nodes.new('ShaderNodeSeparateXYZ')
         node_sep.parent = frame
         node_sep.location = x - 80, y - 110
 
@@ -531,11 +524,11 @@ class N64Shader:
             #
             # This is rather ugly :/
             if i == 1:
-                node = nodes.new('ShaderNodeMath')
+                node = self.nodes.new('ShaderNodeMath')
                 node.parent = frame
                 node.location = x - 140, y
                 node.operation = 'SUBTRACT'
-                links.new(node.outputs[0], socket)
+                self.connect(node.outputs[0], socket)
                 node.inputs[0].default_value = 1
                 socket = node.inputs[1]
                 x -= 200
@@ -543,20 +536,20 @@ class N64Shader:
             if wrap > 0:
                 if mirror:
                     # Mirror with a Math/Ping Pong node
-                    node = nodes.new('ShaderNodeMath')
+                    node = self.nodes.new('ShaderNodeMath')
                     node.parent = frame
                     node.location = x - 140, y
                     node.operation = 'PINGPONG'
-                    links.new(node.outputs[0], socket)
+                    self.connect(node.outputs[0], socket)
                     socket = node.inputs[0]
                     node.inputs[1].default_value = wrap  # scale
                 else:
                     # Wrap with a Math/Wrap node
-                    node = nodes.new('ShaderNodeMath')
+                    node = self.nodes.new('ShaderNodeMath')
                     node.parent = frame
                     node.location = x - 140, y
                     node.operation = 'WRAP'
-                    links.new(node.outputs[0], socket)
+                    self.connect(node.outputs[0], socket)
                     socket = node.inputs[0]
                     node.inputs[1].default_value = 0     # min
                     node.inputs[2].default_value = wrap  # max
@@ -564,10 +557,10 @@ class N64Shader:
 
             if clamp > 0:
                 # Clamp
-                node = nodes.new('ShaderNodeClamp')
+                node = self.nodes.new('ShaderNodeClamp')
                 node.parent = frame
                 node.location = x - 140, y
-                links.new(node.outputs[0], socket)
+                self.connect(node.outputs[0], socket)
                 socket = node.inputs[0]
                 node.inputs[1].default_value = 0      # min
                 node.inputs[2].default_value = clamp  # max
@@ -575,16 +568,16 @@ class N64Shader:
 
             # 1 - V converts V back into original UV space
             if i == 1:
-                node = nodes.new('ShaderNodeMath')
+                node = self.nodes.new('ShaderNodeMath')
                 node.parent = frame
                 node.location = x - 140, y
                 node.operation = 'SUBTRACT'
-                links.new(node.outputs[0], socket)
+                self.connect(node.outputs[0], socket)
                 node.inputs[0].default_value = 1
                 socket = node.inputs[1]
                 x -= 200
 
-            links.new(node_sep.outputs[i], socket)
+            self.connect(node_sep.outputs[i], socket)
 
             node_sep.location[0] = min(node_sep.location[0], x - 200)
 
