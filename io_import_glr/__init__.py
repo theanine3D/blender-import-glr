@@ -24,6 +24,7 @@ from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty, BoolProperty, EnumProperty, FloatProperty, BoolVectorProperty, FloatVectorProperty, CollectionProperty
 from bpy.types import Panel, Operator, OperatorFileListElement
 
+
 class GLR_OT_FilterHelper_TextureList(Operator):
     '''Generates a list of selected materials in edit mode'''
     bl_idname = 'import_glr.gen_filter_list'
@@ -69,6 +70,7 @@ class GLR_OT_FilterHelper_TextureList(Operator):
     def execute(self, context):
         self.search_polygons_for_textures(context)
         return {'FINISHED'}
+
 
 class GLR_OT_ImportGLR(Operator, ImportHelper):
     '''Import a GLR file'''
@@ -170,6 +172,7 @@ class GLR_OT_ImportGLR(Operator, ImportHelper):
         wm.fileselect_add(self)
         return {'RUNNING_MODAL'}
 
+
 class GLR_PT_transform(Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
@@ -188,6 +191,7 @@ class GLR_PT_transform(Panel):
         sfile = context.space_data
         operator = sfile.active_operator
         layout.prop(operator, 'scale')
+
 
 class GLR_PT_scene(Panel):
     bl_space_type = 'FILE_BROWSER'
@@ -213,6 +217,7 @@ class GLR_PT_scene(Panel):
         layout.prop(operator, 'enable_bf_culling')
         layout.prop(operator, 'enable_fog')
 
+
 class GLR_PT_filter(Panel):
     bl_space_type = 'FILE_BROWSER'
     bl_region_type = 'TOOL_PROPS'
@@ -233,8 +238,10 @@ class GLR_PT_filter(Panel):
         row.prop(operator, 'filter_mode')
         layout.prop(operator, 'filter_list', icon='TEXTURE')
 
+
 def menu_func_import(self, context):
     self.layout.operator(GLR_OT_ImportGLR.bl_idname, text='GLideN64 Rip (.glr)')
+
 
 CLASSES = (
     GLR_OT_FilterHelper_TextureList,
@@ -244,15 +251,18 @@ CLASSES = (
     GLR_PT_filter,
 )
 
+
 def register():
     for cl in CLASSES:
         bpy.utils.register_class(cl)
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
+
 def unregister():
     for cl in CLASSES:
         bpy.utils.unregister_class(cl)
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
+
 
 if __name__ == '__main__':
     register()
