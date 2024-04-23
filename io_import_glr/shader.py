@@ -241,6 +241,11 @@ class N64Shader:
         a, b, c, d = combiner
         x, y = location
 
+        # Early out for (a-b)*0 + d = d
+        if c == '0':
+            self.vars['Combined Color'] = self.vars[d]
+            return
+
         frame = self.new_node('NodeFrame')
         frame.label = show_combiner_formula(a, b, c, d)
 
@@ -270,6 +275,11 @@ class N64Shader:
     def make_alpha_combiner(self, combiner, location):
         a, b, c, d = combiner
         x, y = location
+
+        # Early out for (a-b)*0 + d = d
+        if c == '0':
+            self.vars['Combined Alpha'] = self.vars[d]
+            return
 
         frame = self.new_node('NodeFrame')
         frame.label = show_combiner_formula(a, b, c, d)
