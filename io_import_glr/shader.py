@@ -337,6 +337,11 @@ class N64Shader:
         self.connect(p, in2)
         self.vars['Combined Color'] = out
 
+        if a == 'Fog Level':
+            frame = self.nodes.new('NodeFrame')
+            frame.label = 'Fog'
+            node.parent = frame
+
         return node
 
     def make_inputs(self, tex0, tex1, input_vars):
