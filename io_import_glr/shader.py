@@ -210,7 +210,8 @@ class N64Shader:
                 x += 320
 
             if 'Framebuffer Color' in blender:
-                self.use_alpha = True
+                if self.vars['Combined Alpha'] != 1:
+                    self.use_alpha = True
                 break
 
     def make_output(self):
