@@ -67,6 +67,13 @@ def show_combiner_formula(a, b, c, d):
 
 def show_blender_formula(p, a, m, b):
     # Formats (p*a + m*b)/(a+b) as a human readable string
+    # The denominator (a+b) is omitted for brevity.
+
+    # If b = 1-a, p*a + m*(1-a) = mix(m, p, a)
+    if b == 'One Minus A':
+        if a == '1':   return p
+        elif a == '0': return m
+        else:          return f'mix({m}, {p}, {a})'
 
     # pa = p * a
     if a == '0':     pa = '0'
@@ -78,24 +85,11 @@ def show_blender_formula(p, a, m, b):
     else:            mb = f'{m} × {b}'
 
     # num = (pa + mb)
-    if pa == '0':    num = mb
-    elif mb == '0':  num = pa
-    else:            num = f'({pa} + {mb})'
+    if pa == '0':    add = mb
+    elif mb == '0':  add = pa
+    else:            add = f'{pa} + {mb}'
 
-    # den = (a + b)
-    if a == '0':     den = b
-    elif b == '0':   den = a
-    elif b == 'One Minus A':  den = '1'
-    elif (a,b) == ('0', '0'): den = '0'
-    else:            den = f'({a} + {b})'
-
-    # out = num / den
-    if den == '1':   out = num
-    elif num == '0': out = '0'
-    elif num == den: out = '1'
-    else:            out = f'{num} / {den}'
-
-    return out
+    return add
 
 
 #######################
