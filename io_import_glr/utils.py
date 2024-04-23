@@ -38,6 +38,12 @@ def get_backface_culling(geometry_mode, microcode):
 def show_combiner_formula(a, b, c, d):
     # Formats (a-b)*c+d as a human readable string
 
+    # If d = b, (a-b)*c+b = (1-c)*b+a*c = mix(b, a, c)
+    if d == b and b != '0':
+        if c == '0':   return b
+        elif c == '1': return a
+        else:          return f'mix({b}, {a}, {c})'
+
     # sub = (a - b)
     if a == b:       sub = '0'
     elif b == '0':   sub = a
