@@ -385,20 +385,23 @@ class N64Shader:
                     self.vars[f'{vc} Color'] = node.outputs['Color']
                     self.vars[f'{vc} Alpha'] = node.outputs['Alpha']
 
-            # Fog Level
-            if var == 'Fog Level':
+            # Scalar attributes
+            if var in ['Fog Level', 'Primitive LOD Fraction']:
                 node = self.nodes.new('ShaderNodeAttribute')
                 node.location = x, y
                 y -= 290
-                node.attribute_name = 'Fog Level'
-                node.name = node.label = 'Fog Level'
-                self.vars['Fog Level'] = node.outputs['Fac']
+                if var == 'Fog Level':
+                    node.attribute_name = 'Fog Level'
+                elif var == 'Primitive LOD Fraction':
+                    node.attribute_name = 'Primitive LOD'
+                node.name = node.label = var
+                self.vars[var] = node.outputs['Fac']
 
             # Use constant 0 for LOD fraction. Usually LOD is used for
             # mipmapping, and 0 "should" pick the highest detail
             # level. But certain effects (like Peach's portrait
             # morphing into Bowser's in SM64) won't work.
-            if var in ['LOD Fraction', 'Primitive LOD Fraction']:
+            if var == 'LOD Fraction':
                 node = self.nodes.new('ShaderNodeValue')
                 node.location = x, y
                 y -= 200

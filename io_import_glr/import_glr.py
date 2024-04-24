@@ -163,6 +163,7 @@ class GlrImporter:
         blend_colors = []
         fog_colors = []
         fog_levels = []
+        prim_lods = []
         uvs0 = []
         uvs1 = []
 
@@ -222,6 +223,9 @@ class GlrImporter:
             blend_colors += [blend_r, blend_g, blend_b, blend_a] * 3
             fog_colors += [fog_r, fog_g, fog_b, fog_a] * 3
 
+            # Primitive LOD fraction (once per face)
+            prim_lods.append(prim_l)
+
             faces.append((len(verts) - 3, len(verts) - 2, len(verts) - 1))
 
             # Gather all the info we need to make the material for this tri
@@ -272,13 +276,17 @@ class GlrImporter:
             name='Fog Color',
         ).data.foreach_set('color', fog_colors)
 
-        mesh.uv_layers.new(name='UV0').data.foreach_set('uv', uvs0)
-        mesh.uv_layers.new(name='UV1').data.foreach_set('uv', uvs1)
-
         if self.enable_fog and any(fog_levels):
             mesh.attributes.new(
                 name='Fog Level', type='FLOAT', domain='POINT',
             ).data.foreach_set('value', fog_levels)
+
+        mesh.attributes.new(
+            name='Primitive LOD', type='FLOAT', domain='FACE',
+        ).data.foreach_set('value', prim_lods)
+
+        mesh.uv_layers.new(name='UV0').data.foreach_set('uv', uvs0)
+        mesh.uv_layers.new(name='UV1').data.foreach_set('uv', uvs1)
 
         mesh.validate()
 
