@@ -94,6 +94,7 @@ class N64Shader:
         blender1, blender2,
         tex0, tex1,
         cull_backfacing,
+        is_translucent,
         show_alpha,
     ):
         mat = self.material
@@ -116,7 +117,7 @@ class N64Shader:
         mat.shadow_method = 'NONE'
         mat.use_backface_culling = cull_backfacing
         if self.use_alpha and show_alpha:
-            mat.blend_method = 'HASHED'
+            mat.blend_method = 'BLEND' if is_translucent else 'HASHED'
         else:
             mat.blend_method = 'OPAQUE'
 

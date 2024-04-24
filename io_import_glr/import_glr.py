@@ -370,11 +370,30 @@ class GlrImporter:
             if combiner2:
                 combiner2 = (*combiner2[:4], '0', '0', '0', '1')
 
+        # Translucent materials (with 0 < alpha < 1) are generally
+        # detectable in two ways: first, they use the blender formula
+        #
+        #   mix(Framebuffer Color, Combined Color, Combined Alpha)
+        #
+        # and second, they set ZMODE_XLU (XLU=translucent) in the
+        # other_modes register. We currently use the blend formula for
+        # detection.
+        #
+        # NOTE: Setting is_translucent will make the EEVEE use
+        # "Alpha Blend" mode instead of "Alpha Hashed". Back this
+        # out if it causes too many sorting problems.
+        xlu_blender = (
+            'Combined Color', 'Combined Alpha',
+            'Framebuffer Color', 'One Minus A',
+        )
+        is_translucent = xlu_blender in [blender1, blender2]
+
         args = (
             combiner1, combiner2,
             blender1, blender2,
             tex0, tex1,
             cull_backface,
+            is_translucent,
             self.show_alpha,
         )
 
