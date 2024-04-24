@@ -349,6 +349,27 @@ class GlrImporter:
         cull_backface = get_backface_culling(geometry_mode, self.microcode)
         cull_backface &= self.display_culling
 
+        # After the color combiners run, there is a stage that can
+        # modify the output alpha.
+        #
+        # If the CVG_X_ALPHA flag is set, the RDP multiplies coverage
+        # and alpha values and uses the result as both the coverage
+        # and the alpha.
+        #
+        # Then, if the ALPHA_CVG_SEL flag is set, the alpha value is
+        # replaced by the coverage value.
+        #
+        # If we assume the coverage starts as 1, this means that when
+        # ALPHA_CVG_SEL is set but CVG_X_ALPHA is not, the alpha is
+        # replaced by 1. (Otherwise the alpha does not change.)
+        cvg_x_alpha = (other_mode >> 12) & 1
+        alpha_cvg_sel = (other_mode >> 13) & 1
+        if alpha_cvg_sel and not cvg_x_alpha:
+            # Replace the real alpha combiner with (0-0)*0+1
+            combiner1 = (*combiner1[:4], '0', '0', '0', '1')
+            if combiner2:
+                combiner2 = (*combiner2[:4], '0', '0', '0', '1')
+
         args = (
             combiner1, combiner2,
             blender1, blender2,
