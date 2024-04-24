@@ -247,7 +247,20 @@ class N64Shader:
 
         # Early out for (a-b)*0 + d = d
         if c == '0':
-            self.vars['Combined Color'] = self.vars[d]
+            if isinstance(self.vars[d], bpy.types.NodeSocket):
+                self.vars['Combined Color'] = self.vars[d]
+            else:
+                # Slightly awkward case. self.connect connects scalars
+                # to a Color socket by putting them in the socket's
+                # default_value. But because "Combined Color" may get
+                # connected to a Shader socket, which has no
+                # default_value, it needs to be a real socket, not a
+                # scalar. So in this case we create an RGB node to
+                # supply the constant value.
+                node = self.nodes.new('ShaderNodeRGB')
+                node.location = x, y
+                self.connect(self.vars[d], node.outputs[0])
+                self.vars['Combined Color'] = node.outputs[0]
             return
 
         frame = self.nodes.new('NodeFrame')
