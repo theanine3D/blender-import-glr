@@ -114,12 +114,18 @@ class N64Shader:
         self.make_output()
 
         # Set material-level properties
-        mat.shadow_method = 'NONE'
-        mat.use_backface_culling = cull_backfacing
-        if self.use_alpha and show_alpha:
-            mat.blend_method = 'BLEND' if is_translucent else 'HASHED'
+        if bpy.app.version < (4, 2, 0):
+            mat.shadow_method = 'NONE'
+            if self.use_alpha and show_alpha:
+                mat.blend_method = 'BLEND' if is_translucent else 'HASHED'
+            else:
+                mat.blend_method = 'OPAQUE'
         else:
-            mat.blend_method = 'OPAQUE'
+            if self.use_alpha and show_alpha and is_translucent:
+                mat.surface_render_method = 'BLENDED'
+            else:
+                mat.surface_render_method = 'DITHERED'
+        mat.use_backface_culling = cull_backfacing
 
         # Custom props (useful for debugging)
         mat['N64 Texture 0'] = show_texture_info(tex0) if tex0['crc'] else ''
