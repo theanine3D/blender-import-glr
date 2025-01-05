@@ -226,6 +226,8 @@ class N64Shader:
 
     def make_output(self):
         x = self.get_next_x_position()
+        node_emission = self.nodes.new('ShaderNodeEmission')
+        node_emission.location = x, 160
 
         # If the shader needs alpha blending, combine the color and
         # alpha with a Transparent BSDF + Mix Shader.
@@ -235,18 +237,21 @@ class N64Shader:
 
             node_mix.location = x + 200, 300
             node_trans.location = x, 400
+            node_emission.location = x, 160
             x += 500
 
             self.connect('Combined Alpha', node_mix.inputs[0])
             self.connect(node_trans.outputs[0], node_mix.inputs[1])
-            self.connect('Combined Color', node_mix.inputs[2])
+            self.connect(node_emission.outputs[0], node_mix.inputs[2])
+            self.connect('Combined Color', node_emission.inputs[0])
 
         node_out = self.nodes.new('ShaderNodeOutputMaterial')
-        node_out.location = x, 160
+        node_out.location = x + 200, 260
         if self.use_alpha:
             self.connect(node_mix.outputs[0], node_out.inputs[0])
         else:
-            self.connect('Combined Color', node_out.inputs[0])
+            self.connect('Combined Color', node_emission.inputs[0])
+            self.connect(node_emission.outputs[0], node_out.inputs[0])
 
     def make_color_combiner(self, combiner, location):
         a, b, c, d = combiner
