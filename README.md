@@ -1,6 +1,8 @@
 # blender-import-glr
 Addon which adds glr import support to Blender, the free 3D modelling suite.
 
+My fork of this addon has fixes for Blender 4.3 support and materials created by the addon.
+
 ---
 
 ## About
