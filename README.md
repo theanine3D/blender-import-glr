@@ -1,7 +1,7 @@
 # blender-import-glr
 Addon which adds glr import support to Blender, the free 3D modelling suite.
 
-My fork of this addon maintains support for Blender 4.3 and higher, and also adds an Emission shader node to the imported GLR materials.
+This is a fork of Luctaris's [original addon](https://github.com/Luctaris/blender-import-glr), which is no longer being maintained by the original developer. My fork of this addon maintains support for Blender 4.3 and higher, and also adds an Emission shader node to the imported GLR materials. The latter makes it possible for my addon [Material Batch Tools](https://extensions.blender.org/add-ons/matbatchtools/) to easily swap the Emission node with a Principled node for all materials, if you prefer to use Blender light for your scene.
 
 ---
 
